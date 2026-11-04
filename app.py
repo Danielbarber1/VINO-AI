@@ -123,3 +123,4 @@ if submit_button and prompt.strip():
           {"role": "assistant", "content": response_text}
       )
       st.rerun()
+        
