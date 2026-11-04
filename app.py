@@ -3,7 +3,7 @@ import streamlit as st
 
 # ---------- הגדרות ----------
 APP_NAME = "דניאל / וינו AI"
-GEMINI_MODEL = "gemini-2.5-flash"  # מודל חינמי ב-Google AI Studio
+GEMINI_MODEL = "gemini-3.8-flash"  # מודל חינמי ב-Google AI Studio
 GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
 
 SYSTEM_PROMPT = f"""אתה העוזר של האפליקציה "{APP_NAME}".
