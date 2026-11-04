@@ -22,13 +22,17 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# הגדרת מפתח ה-API
+# טעינת מפתח ה-API וניקוי אוטומטי של רווחים או שורות חדשות
 api_key = os.getenv("GEMINI_API_KEY")
 if not api_key:
   try:
     api_key = st.secrets["GEMINI_API_KEY"]
   except Exception:
     api_key = ""
+
+if api_key:
+  # ניקוי המפתח מרווחים או ירידות שורה מיותרות בצורה אוטומטית לחלוטין
+  api_key = str(api_key).strip().replace("\n", "").replace("\r", "")
 
 # כותרת ראשית
 st.markdown(
@@ -90,10 +94,8 @@ if submit_button and prompt.strip():
           response_text = "⚠️ מפתח API אינו מוגדר ב-Secrets."
           break
 
-        # חיבור עם הספרייה החדשה שתומכת במפתחות AQ
         client = genai.Client(api_key=api_key)
 
-        # המרת היסטוריית ההודעות למבנה של הספרייה החדשה
         history = []
         for m in st.session_state.messages[:-1]:
           r = "user" if m["role"] == "user" else "model"
