@@ -31,7 +31,6 @@ if not api_key:
     api_key = ""
 
 if api_key:
-  # ניקוי המפתח מרווחים או ירידות שורה מיותרות בצורה אוטומטית לחלוטין
   api_key = str(api_key).strip().replace("\n", "").replace("\r", "")
 
 # כותרת ראשית
@@ -105,7 +104,8 @@ if submit_button and prompt.strip():
               )
           )
 
-        chat = client.chats.create(model="gemini-2.5-flash", history=history)
+        # שימוש בדגם המעודכן
+        chat = client.chats.create(model="gemini-3.8-flash", history=history)
         res = chat.send_message(prompt)
         response_text = res.text
         success = True
