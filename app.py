@@ -111,17 +111,10 @@ if submit_button and prompt.strip():
         success = True
         break
       except Exception as e:
-        err_str = str(e)
-        if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
-          response_text = (
-              "⚠️ הגעת למכסת הבקשות היומית בתוכנית החינמית עבור דגם זה (20"
-              " בקשות ביום). ניתן ליצור מפתח חדש ב-Google AI Studio."
-          )
-          break
-        if "503" in err_str or "High Demand" in err_str or "UNAVAILABLE" in err_str:
+        if "503" in str(e) or "High Demand" in str(e) or "UNAVAILABLE" in str(e):
           time.sleep(1)
           continue
-        response_text = f"⚠️ שגיאה: {err_str}"
+        response_text = f"⚠️ שגיאה: {str(e)}"
         break
 
     placeholder.markdown(response_text)
