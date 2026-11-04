@@ -9,16 +9,22 @@ import streamlit as st
 APP_NAME = "AI VINO"
 GEMINI_MODEL = "gemini-3.8-flash"  # מודל חינמי ב-Google AI Studio
 GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
-NUM_SEARCH_RESULTS = 5
+NUM_SEARCH_RESULTS = 4
 
 SYSTEM_PROMPT = f"""אתה העוזר של האפליקציה "{APP_NAME}".
 ענה בעברית, אלא אם המשתמש כותב בשפה אחרת. היה ברור, מדויק וידידותי.
+תשובות קצרות וממוקדות, בלי הקדמות מיותרות. הרחב רק כשהמשתמש מבקש פירוט.
 כשמסופקות תוצאות חיפוש, התבסס עליהן, ציין מידע עדכני, והפנה למקורות בסימון [מספר].
 אם התוצאות לא מספיקות או סותרות, כתוב זאת במפורש. אל תמציא עובדות."""
 
 BUSY_MESSAGE = "השרתים של הבינה המלאכותית עמוסים כרגע. נסה שוב בעוד רגע."
 
-st.set_page_config(page_title=APP_NAME, page_icon="🤖", layout="centered")
+st.set_page_config(
+    page_title=APP_NAME,
+    page_icon="🤖",
+    layout="centered",
+    initial_sidebar_state="collapsed",
+)
 
 # ---------- עיצוב ----------
 st.markdown("""
@@ -77,6 +83,11 @@ st.markdown("""
         border-left: 1px solid rgba(124,58,237,.2);
     }
     [data-testid="stSidebar"] h2 { font-weight: 800; }
+    [data-testid="stSidebarCollapsedControl"], [data-testid="stSidebarCollapseButton"] button {
+        background: rgba(124,58,237,.18); border: 1px solid rgba(124,58,237,.5);
+        border-radius: 10px; color: #eef0f7;
+    }
+    [data-testid="stSidebarCollapsedControl"]:hover { background: linear-gradient(90deg,#7c3aed,#06b6d4); }
 
     .stButton > button {
         border-radius: 12px; border: 1px solid rgba(124,58,237,.45);
@@ -202,7 +213,11 @@ def _ask_gemini_once(history: list[dict]) -> str:
         json={
             "system_instruction": {"parts": [{"text": SYSTEM_PROMPT}]},
             "contents": contents,
-            "generationConfig": {"maxOutputTokens": 2000, "temperature": 0.7},
+            "generationConfig": {
+                "maxOutputTokens": 1024,  # תשובות קצרות יותר = זמן המתנה קצר יותר
+                "temperature": 0.4,       # פחות אקראיות = תשובות יציבות וממוקדות
+                "topP": 0.9,
+            },
         },
         timeout=60,
     )
