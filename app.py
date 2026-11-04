@@ -95,9 +95,7 @@ if submit_button and prompt.strip():
 
         client = genai.Client(api_key=api_key)
 
-        # שומרים רק את 6 ההודעות האחרונות כדי שהשרת לא יתאמץ לשלוח הכל
         recent_messages = st.session_state.messages[-7:-1]
-
         history = []
         for m in recent_messages:
           r = "user" if m["role"] == "user" else "model"
@@ -107,8 +105,8 @@ if submit_button and prompt.strip():
               )
           )
 
-        # יצירת צ'אט מהיר
-        chat = client.chats.create(model="gemini-1.5-flash", history=history)
+        # שימוש בשם הדגם הנכון הנתמך בספרייה החדשה
+        chat = client.chats.create(model="gemini-2.5-flash", history=history)
         res = chat.send_message(prompt)
         response_text = res.text
         success = True
