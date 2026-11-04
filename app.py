@@ -22,7 +22,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# טעינת מפתח ה-API וניקוי אוטומטי של רווחים או שורות חדשות
+# טעינת מפתח ה-API וניקוי אוטומטי
 api_key = os.getenv("GEMINI_API_KEY")
 if not api_key:
   try:
@@ -59,12 +59,12 @@ with st.sidebar:
       role_icon = "👤" if msg["role"] == "user" else "🤖"
       st.text(f"{role_icon} {msg['content'][:25]}...")
 
-# הצגת השיחה מההיסטוריה פעם אחת בלבד
+# הצגת השיחה מההיסטוריה
 for message in st.session_state.messages:
   with st.chat_message(message["role"]):
     st.markdown(message["content"])
 
-# תיבת טקסט גדולה לכתיבת כמה שורות שתרצה
+# תיבת טקסט גדולה לכתיבה
 with st.form(key="chat_form", clear_on_submit=True):
   prompt = st.text_area(
       "כתוב את ההודעה שלך כאן (אפשר כמה שורות שתרצה):",
@@ -104,8 +104,8 @@ if submit_button and prompt.strip():
               )
           )
 
-        # שימוש בדגם המעודכן
-        chat = client.chats.create(model="gemini-3.8-flash", history=history)
+        # מעבר לדגם gemini-1.5-flash
+        chat = client.chats.create(model="gemini-1.5-flash", history=history)
         res = chat.send_message(prompt)
         response_text = res.text
         success = True
@@ -114,7 +114,7 @@ if submit_button and prompt.strip():
         if "503" in str(e) or "High Demand" in str(e) or "UNAVAILABLE" in str(e):
           time.sleep(1)
           continue
-        response_text = f"⚠️ שגיאה זמנית: {str(e)}"
+        response_text = f"⚠️ שגיאה: {str(e)}"
         break
 
     placeholder.markdown(response_text)
