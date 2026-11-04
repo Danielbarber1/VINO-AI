@@ -105,8 +105,8 @@ if submit_button and prompt.strip():
               )
           )
 
-        # שימוש בשם הדגם הנכון הנתמך בספרייה החדשה
-        chat = client.chats.create(model="gemini-2.5-flash", history=history)
+        # שימוש בדגם המעודכן שהמערכת דרשה
+        chat = client.chats.create(model="gemini-3.8-flash", history=history)
         res = chat.send_message(prompt)
         response_text = res.text
         success = True
