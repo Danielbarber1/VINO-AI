@@ -1,3 +1,5 @@
+import time
+
 import requests
 import streamlit as st
 
@@ -150,7 +152,37 @@ def format_sources(results: list[dict]) -> str:
     return f"**מקורות:** {links}"
 
 
-def ask_gemini(history: list[dict]) -> str:
+class GeminiError(RuntimeError):
+    """שגיאה מ-Gemini, עם קוד הסטטוס של התשובה."""
+    def __init__(self, status: int, message: str):
+        super().__init__(message)
+        self.status = status
+
+
+RETRYABLE_STATUS = {429, 500, 502, 503, 504}  # עומס, תקלה זמנית ומגבלת קצב
+
+
+def ask_gemini(history: list[dict], max_attempts: int = 5, base_delay: float = 1.0) -> str:
+    """
+    קריאה ל-Gemini עם ניסיון חוזר אוטומטי.
+    בשגיאות עומס (503 / 429) או בעיות רשת, מחכים ומנסים שוב עם המתנה שגדלה בכל פעם:
+    1, 2, 4, 8 שניות. שגיאות אחרות (כמו מפתח שגוי) נזרקות מיד.
+    """
+    for attempt in range(1, max_attempts + 1):
+        try:
+            return _ask_gemini_once(history)
+        except GeminiError as e:
+            if e.status not in RETRYABLE_STATUS or attempt == max_attempts:
+                raise
+        except requests.RequestException:
+            if attempt == max_attempts:
+                raise
+        time.sleep(base_delay * (2 ** (attempt - 1)))
+    # לא אמור להגיע לכאן
+    raise RuntimeError("נכשל אחרי מספר ניסיונות")
+
+
+def _ask_gemini_once(history: list[dict]) -> str:
     """שליחת השיחה ל-Gemini. Gemini משתמש בתפקידים 'user' ו-'model'."""
     contents = [
         {
@@ -170,7 +202,7 @@ def ask_gemini(history: list[dict]) -> str:
         timeout=60,
     )
     if not resp.ok:
-        raise RuntimeError(f"Gemini {resp.status_code}: {resp.text[:300]}")
+        raise GeminiError(resp.status_code, f"Gemini {resp.status_code}: {resp.text[:300]}")
 
     data = resp.json()
     candidate = (data.get("candidates") or [{}])[0]
@@ -246,7 +278,7 @@ if prompt := st.chat_input("כתוב שאלה..."):
 
     sources = format_sources(results)
     with st.chat_message("assistant"):
-        with st.spinner("כותב תשובה..."):
+        with st.spinner("כותב תשובה... (אם השרת עמוס, ננסה שוב אוטומטית)"):
             try:
                 answer = ask_gemini(history_for_api)
             except requests.RequestException as e:
