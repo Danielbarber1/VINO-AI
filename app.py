@@ -1,3 +1,4 @@
+import random
 import time
 
 import requests
@@ -162,11 +163,11 @@ class GeminiError(RuntimeError):
 RETRYABLE_STATUS = {429, 500, 502, 503, 504}  # עומס, תקלה זמנית ומגבלת קצב
 
 
-def ask_gemini(history: list[dict], max_attempts: int = 5, base_delay: float = 1.0) -> str:
+def ask_gemini(history: list[dict], max_attempts: int = 8, base_delay: float = 2.0, max_delay: float = 20.0) -> str:
     """
     קריאה ל-Gemini עם ניסיון חוזר אוטומטי.
-    בשגיאות עומס (503 / 429) או בעיות רשת, מחכים ומנסים שוב עם המתנה שגדלה בכל פעם:
-    1, 2, 4, 8 שניות. שגיאות אחרות (כמו מפתח שגוי) נזרקות מיד.
+    בשגיאות עומס (503 / 429) או בעיות רשת, מחכים ומנסים שוב עם המתנה שגדלה בכל פעם
+    (עד 20 שניות בין ניסיון לניסיון, ועד 8 ניסיונות). שגיאות אחרות (כמו מפתח שגוי) נזרקות מיד.
     """
     for attempt in range(1, max_attempts + 1):
         try:
@@ -177,7 +178,8 @@ def ask_gemini(history: list[dict], max_attempts: int = 5, base_delay: float = 1
         except requests.RequestException:
             if attempt == max_attempts:
                 raise
-        time.sleep(base_delay * (2 ** (attempt - 1)))
+        wait = min(base_delay * (2 ** (attempt - 1)), max_delay)
+        time.sleep(wait + random.uniform(0, 1))  # קצת אקראיות כדי לא לנסות בדיוק באותו זמן
     # לא אמור להגיע לכאן
     raise RuntimeError("נכשל אחרי מספר ניסיונות")
 
