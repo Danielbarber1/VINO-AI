@@ -16,18 +16,91 @@ st.set_page_config(page_title=APP_NAME, page_icon="🤖", layout="centered")
 # ---------- עיצוב ----------
 st.markdown("""
 <style>
-    .block-container { max-width: 820px; padding-top: 2rem; }
+    @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&display=swap');
+
+    html, body, [class*="css"], .stApp {
+        font-family: 'Heebo', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
+    }
+    .stApp {
+        background:
+            radial-gradient(1000px 500px at 85% -10%, rgba(124,58,237,.20), transparent 60%),
+            radial-gradient(800px 500px at -10% 110%, rgba(6,182,212,.14), transparent 60%),
+            #0b0b14;
+    }
+    .block-container { max-width: 860px; padding-top: 2.2rem; padding-bottom: 6rem; }
+    #MainMenu, footer, header[data-testid="stHeader"] { visibility: hidden; height: 0; }
+
+    /* כותרת */
     .brand {
-        font-size: 2.4rem; font-weight: 800; text-align: center;
-        background: linear-gradient(90deg, #7c3aed, #06b6d4);
+        font-size: 2.6rem; font-weight: 800; text-align: center; letter-spacing: -0.5px;
+        background: linear-gradient(90deg, #a78bfa, #7c3aed 40%, #06b6d4);
         -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        margin-bottom: 0.1rem;
+        margin-bottom: 0.2rem;
     }
-    .subtitle { text-align: center; color: #94a3b8; margin-bottom: 1.5rem; }
+    .subtitle {
+        text-align: center; color: #94a3b8; margin-bottom: 1.8rem; font-size: 1.02rem;
+    }
+
+    /* בועות צ'אט */
     [data-testid="stChatMessage"] {
-        border-radius: 16px; padding: 0.8rem 1rem; margin-bottom: 0.6rem;
-        border: 1px solid rgba(124, 58, 237, 0.15);
+        border-radius: 18px; padding: 0.9rem 1.1rem; margin-bottom: 0.8rem;
+        background: rgba(22, 22, 38, 0.78);
+        border: 1px solid rgba(124, 58, 237, 0.18);
+        box-shadow: 0 8px 24px rgba(0,0,0,.25);
+        backdrop-filter: blur(6px);
+        line-height: 1.75; color: #e8eaf3;
     }
+    /* הודעת משתמש: גרדיאנט בולט */
+    [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {
+        background: linear-gradient(135deg, rgba(124,58,237,.35), rgba(6,182,212,.18));
+        border: 1px solid rgba(167, 139, 250, .35);
+    }
+    [data-testid="stChatMessage"] p, [data-testid="stChatMessage"] li { font-size: 1rem; }
+    [data-testid="stChatMessage"] a { color: #67e8f9; text-decoration: none; }
+    [data-testid="stChatMessage"] a:hover { text-decoration: underline; }
+
+    /* שדה הקלט */
+    [data-testid="stChatInput"] {
+        background: rgba(19, 19, 31, .92);
+        border: 1px solid rgba(124, 58, 237, .35);
+        border-radius: 16px;
+        box-shadow: 0 0 0 4px rgba(124,58,237,.08);
+    }
+    [data-testid="stChatInput"]:focus-within {
+        border-color: #7c3aed;
+        box-shadow: 0 0 0 4px rgba(124,58,237,.22);
+    }
+    [data-testid="stChatInput"] textarea { color: #eef0f7 !important; }
+
+    /* סרגל צד */
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #13131f 0%, #0d0d18 100%);
+        border-left: 1px solid rgba(124,58,237,.2);
+    }
+    [data-testid="stSidebar"] h2 { font-weight: 800; }
+    [data-testid="stSidebar"] .stCaption { color: #8b8fa8; }
+
+    /* כפתורים */
+    .stButton > button {
+        border-radius: 12px; border: 1px solid rgba(124,58,237,.45);
+        background: rgba(124,58,237,.12); color: #eef0f7; font-weight: 600;
+        padding: 0.55rem 1rem; transition: all .2s ease;
+    }
+    .stButton > button:hover {
+        border-color: #a78bfa; background: linear-gradient(90deg, #7c3aed, #06b6d4);
+        color: #fff; transform: translateY(-1px); box-shadow: 0 6px 18px rgba(124,58,237,.35);
+    }
+    .stButton > button:active { transform: translateY(0); }
+
+    /* התראות והודעות */
+    [data-testid="stAlert"] { border-radius: 14px; }
+
+    /* ספינר */
+    [data-testid="stSpinner"] { color: #a78bfa; }
+
+    /* גלילה */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-thumb { background: rgba(124,58,237,.35); border-radius: 8px; }
 </style>
 """, unsafe_allow_html=True)
 
