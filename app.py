@@ -43,7 +43,7 @@ st.markdown(
 if "messages" not in st.session_state:
   st.session_state.messages = []
 
-# סרגל צד עם מפתח ייחודי לכפתור
+# סרגל צד
 with st.sidebar:
   st.title("⚙️ תפריט")
   if st.button("🔄 שיחה חדשה", use_container_width=True, key="unique_new_chat_btn"):
@@ -59,7 +59,7 @@ with st.sidebar:
       role_icon = "👤" if msg["role"] == "user" else "🤖"
       st.text(f"{role_icon} {msg['content'][:25]}...")
 
-# הצגת השיחה מההיסטוריה
+# הצגת ההיסטוריה
 for message in st.session_state.messages:
   with st.chat_message(message["role"]):
     st.markdown(message["content"])
@@ -104,8 +104,8 @@ if submit_button and prompt.strip():
               )
           )
 
-        # שימוש בדגם הנתמך והיציב gemini-2.0-flash
-        chat = client.chats.create(model="gemini-2.0-flash", history=history)
+        # שימוש בדגם הנדרש
+        chat = client.chats.create(model="gemini-3.8-flash", history=history)
         res = chat.send_message(prompt)
         response_text = res.text
         success = True
