@@ -11,14 +11,12 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# עיצוב מותאם: כחול-לבן עם כותרת סגולה וממשק נקי
 st.markdown(
     """
     <style>
     .main { background-color: #0b1329; color: #ffffff; }
     .stTextInput textarea, .stChatInput input { background-color: #1e293b !important; color: #ffffff !important; }
     h1 { color: #a855f7 !important; text-align: center; font-weight: 800; }
-    .stButton button { border-radius: 8px; }
     </style>
 """,
     unsafe_allow_html=True,
@@ -38,9 +36,9 @@ if not api_key:
 
 ADMIN_EMAIL = "daniel@gmail.com"
 
-# ניהול מרובה שיחות (Chats) בזיכרון
+# ניהול סשנים של שיחות
 if "chats" not in st.session_state:
-  st.session_state.chats = {}  # dict של chat_id: {title, messages}
+  st.session_state.chats = {}
 if "current_chat_id" not in st.session_state:
   st.session_state.current_chat_id = None
 if "user_email" not in st.session_state:
@@ -49,7 +47,6 @@ if "user_name" not in st.session_state:
   st.session_state.user_name = "אורח"
 
 
-# פונקציית עזר ליצירת שיחה חדשה
 def create_new_chat():
   chat_id = datetime.now().strftime("%Y%m%d_%H%M%S")
   st.session_state.chats[chat_id] = {
@@ -59,7 +56,6 @@ def create_new_chat():
   st.session_state.current_chat_id = chat_id
 
 
-# יצירת שיחה ראשונה אם אין עדיין
 if (
     not st.session_state.chats
     or st.session_state.current_chat_id not in st.session_state.chats
@@ -68,13 +64,12 @@ if (
 
 st.markdown("<h1>AI VINO</h1>", unsafe_allow_html=True)
 
-# סרגל צד - ניהול שיחות ומשתמשים
+# סרגל צד
 with st.sidebar:
   st.title("⚙️ תפריט")
 
-  # התחברות
   if not st.session_state.user_email:
-    st.info("התחבר באמצעות חשבון Google:")
+    st.info("התחבר באמצעות Google:")
     login_email = st.text_input("הכנס כתובת מייל:", key="login_email_input")
     if st.button("התחבר 🔵", use_container_width=True):
       if login_email.strip():
@@ -90,35 +85,31 @@ with st.sidebar:
 
   st.markdown("---")
 
-  # כפתור ליצירת שיחה חדשה
   if st.button("➕ שיחה חדשה", use_container_width=True):
     create_new_chat()
     st.rerun()
 
   st.markdown("### 📜 השיחות שלי")
-  # הצגת רשימת השיחות השמורות
   for cid, cdata in list(st.session_state.chats.items()):
-    btn_label = f"💬 {cdata['title']}"
+    label = f"💬 {cdata['title']}"
     if cid == st.session_state.current_chat_id:
-      btn_label = f"👉 {cdata['title']}"
-
-    if st.button(btn_label, key=f"chat_btn_{cid}", use_container_width=True):
+      label = f"👉 {cdata['title']}"
+    if st.button(label, key=f"chat_btn_{cid}", use_container_width=True):
       st.session_state.current_chat_id = cid
       st.rerun()
 
-  # פאנל מנהל
   if (
       st.session_state.user_email == ADMIN_EMAIL
       or "admin" in st.session_state.user_email
   ):
     st.markdown("---")
     st.subheader("🛡️ פאנל מנהל")
-    st.write("מצב מנהל פעיל בהצלחה.")
+    st.write("מצב מנהל פעיל.")
 
 # טעינת השיחה הנוכחית
 current_chat = st.session_state.chats[st.session_state.current_chat_id]
 
-# הצגת היסטוריית ההודעות בשיחה הנוכחית
+# הצגת היסטוריית ההודעות
 for message in current_chat["messages"]:
   with st.chat_message(message["role"]):
     if isinstance(message["content"], list):
@@ -130,10 +121,12 @@ for message in current_chat["messages"]:
     else:
       st.markdown(message["content"])
 
-# אזור הקלט והעלאת קבצים באמצעות +
-with st.expander("➕ הוסף תמונה לשיחה", expanded=False):
+# שורת קלט מרכזית הכוללת אפשרות צמודה להעלאת קבצים/תמונות (+)
+col_input, col_file = st.columns([5, 1])
+
+with col_file:
   uploaded_file = st.file_uploader(
-      "בחר תמונה:", type=["png", "jpg", "jpeg"], key="img_upload"
+      "➕ תמונה", type=["png", "jpg", "jpeg"], label_visibility="collapsed"
   )
 
 prompt = st.chat_input("שאל משהו את AI VINO...")
@@ -143,12 +136,16 @@ if prompt or uploaded_file:
   if uploaded_file:
     pil_img = Image.open(uploaded_file)
 
-  # עדכון כותרת השיחה לפי השאלה הראשונה
   if not current_chat["messages"] and prompt:
     current_chat["title"] = prompt[:18] + "..."
 
-  # שמירת הודעת המשתמש בשיחה הנוכחית
-  user_entry = prompt if not pil_img else [prompt, pil_img]
+  user_entry = prompt if not pil_img else ([prompt] if prompt else [])
+  if pil_img:
+    if isinstance(user_entry, list):
+      user_entry.append(pil_img)
+    else:
+      user_entry = [user_entry, pil_img]
+
   current_chat["messages"].append({"role": "user", "content": user_entry})
 
   with st.chat_message("user"):
@@ -173,17 +170,15 @@ if prompt or uploaded_file:
         if pil_img:
           payload.append(pil_img)
 
-        # שימוש במודל הנתמך
+        # שימוש במודל העדכני שהמערכת דורשת
         response = client.models.generate_content(
-            model="gemini-2.5-flash", contents=payload
+            model="gemini-3.8-flash", contents=payload
         )
         response_text = response.text
       except Exception as e:
         response_text = f"⚠️ שגיאה: {e}"
 
     placeholder.markdown(response_text)
-
-    # שמירת תשובת הבוט בשיחה הנוכחית
     current_chat["messages"].append(
         {"role": "assistant", "content": response_text}
     )
