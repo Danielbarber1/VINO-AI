@@ -99,7 +99,6 @@ with st.sidebar:
 
     user_chats = st.session_state.user_chats[current_user]
 
-
     def create_user_chat():
       cid = datetime.now().strftime("%Y%m%d_%H%M%S")
       user_chats[cid] = {
@@ -107,7 +106,6 @@ with st.sidebar:
           "messages": [],
       }
       st.session_state.current_chat_id = cid
-
 
     if not user_chats or st.session_state.current_chat_id not in user_chats:
       create_user_chat()
@@ -184,34 +182,36 @@ else:
         st.image(pil_img, width=280)
 
     with st.chat_message("assistant"):
-      placeholder = st.empty()
-      placeholder.markdown("מעבד נתונים...")
-
-      response_text = ""
-      if not api_key:
-        response_text = "⚠️ מפתח ה-API לא זוהה ב-Secrets."
-      else:
-        try:
-          client = genai.Client(api_key=api_key)
-          payload = []
-          if prompt:
-            payload.append(prompt)
-          if pil_img:
-            payload.append(pil_img)
-
-          # שימוש במודל ברירת המחדל האמיתי והעדכני ביותר שנתמך ב-SDK החדש
-          response = client.models.generate_content(
-              model="gemini-2.5-flash", contents=payload
-          )
-          response_text = response.text
-        except Exception as e:
-          # מגנון חילופי אוטומטי מלא במידה ויש בעיית מודל
+      with st.spinner("מעבד נתונים..."):
+        response_text = ""
+        if not api_key:
+          response_text = "⚠️ מפתח ה-API לא זוהה ב-Secrets."
+        else:
           try:
-            response = client.models.generate_content(
-                model="gemini-flash", contents=payload
-            )
-            response_text = response.text
-          except Exception as e2:
-            response_text = f"⚠️ שגיאה בקשורת מול ה-AI: {e2}"
+            client = genai.Client(api_key=api_key)
+            payload = []
+            if prompt:
+              payload.append(prompt)
+            if pil_img:
+              payload.append(pil_img)
 
-      placeholder.markdown
+            # שימוש במודל היציב והמרה בטוחה של הטקסט
+            response = client.models.generate_content(
+                model="gemini-2.0-flash", contents=payload
+            )
+            response_text = str(response.text)
+          except Exception as e:
+            try:
+              client = genai.Client(api_key=api_key)
+              response = client.models.generate_content(
+                  model="gemini-1.5-flash", contents=payload
+              )
+              response_text = str(response.text)
+            except Exception as e2:
+              response_text = f"⚠️ שגיאה בתקשורת מול ה-AI: {e2}"
+
+        st.markdown(response_text)
+        current_chat["messages"].append(
+            {"role": "assistant", "content": response_text}
+        )
+        st.rerun()
