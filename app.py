@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 import streamlit as st
 from google import genai
 from PIL import Image
@@ -10,12 +11,14 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# עיצוב מותאם: כחול-לבן עם כותרת סגולה וממשק נקי
 st.markdown(
     """
     <style>
     .main { background-color: #0b1329; color: #ffffff; }
     .stTextInput textarea, .stChatInput input { background-color: #1e293b !important; color: #ffffff !important; }
     h1 { color: #a855f7 !important; text-align: center; font-weight: 800; }
+    .stButton button { border-radius: 8px; }
     </style>
 """,
     unsafe_allow_html=True,
@@ -35,20 +38,41 @@ if not api_key:
 
 ADMIN_EMAIL = "daniel@gmail.com"
 
-# אתחול היסטוריה ומשתמש
-if "messages" not in st.session_state:
-  st.session_state.messages = []
+# ניהול מרובה שיחות (Chats) בזיכרון
+if "chats" not in st.session_state:
+  st.session_state.chats = {}  # dict של chat_id: {title, messages}
+if "current_chat_id" not in st.session_state:
+  st.session_state.current_chat_id = None
 if "user_email" not in st.session_state:
   st.session_state.user_email = ""
 if "user_name" not in st.session_state:
   st.session_state.user_name = "אורח"
 
+
+# פונקציית עזר ליצירת שיחה חדשה
+def create_new_chat():
+  chat_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+  st.session_state.chats[chat_id] = {
+      "title": f"שיחה {len(st.session_state.chats) + 1}",
+      "messages": [],
+  }
+  st.session_state.current_chat_id = chat_id
+
+
+# יצירת שיחה ראשונה אם אין עדיין
+if (
+    not st.session_state.chats
+    or st.session_state.current_chat_id not in st.session_state.chats
+):
+  create_new_chat()
+
 st.markdown("<h1>AI VINO</h1>", unsafe_allow_html=True)
 
-# סרגל צד
+# סרגל צד - ניהול שיחות ומשתמשים
 with st.sidebar:
-  st.title("⚙️ תפריט מערכת")
+  st.title("⚙️ תפריט")
 
+  # התחברות
   if not st.session_state.user_email:
     st.info("התחבר באמצעות חשבון Google:")
     login_email = st.text_input("הכנס כתובת מייל:", key="login_email_input")
@@ -66,22 +90,21 @@ with st.sidebar:
 
   st.markdown("---")
 
-  if st.button("🔄 שיחה חדשה", use_container_width=True):
-    st.session_state.messages = []
+  # כפתור ליצירת שיחה חדשה
+  if st.button("➕ שיחה חדשה", use_container_width=True):
+    create_new_chat()
     st.rerun()
 
-  st.markdown("### 📜 היסטוריית שיחות")
-  if not st.session_state.messages:
-    st.write("אין הודעות בהיסטוריה.")
-  else:
-    for msg in st.session_state.messages:
-      icon = "👤" if msg["role"] == "user" else "🤖"
-      txt = (
-          msg["content"]
-          if isinstance(msg["content"], str)
-          else "[הודעת תמונה]"
-      )
-      st.text(f"{icon} {txt[:22]}...")
+  st.markdown("### 📜 השיחות שלי")
+  # הצגת רשימת השיחות השמורות
+  for cid, cdata in list(st.session_state.chats.items()):
+    btn_label = f"💬 {cdata['title']}"
+    if cid == st.session_state.current_chat_id:
+      btn_label = f"👉 {cdata['title']}"
+
+    if st.button(btn_label, key=f"chat_btn_{cid}", use_container_width=True):
+      st.session_state.current_chat_id = cid
+      st.rerun()
 
   # פאנל מנהל
   if (
@@ -92,8 +115,11 @@ with st.sidebar:
     st.subheader("🛡️ פאנל מנהל")
     st.write("מצב מנהל פעיל בהצלחה.")
 
-# הצגת כל ההיסטוריה מתוך st.session_state בכל טעינה מחדש
-for message in st.session_state.messages:
+# טעינת השיחה הנוכחית
+current_chat = st.session_state.chats[st.session_state.current_chat_id]
+
+# הצגת היסטוריית ההודעות בשיחה הנוכחית
+for message in current_chat["messages"]:
   with st.chat_message(message["role"]):
     if isinstance(message["content"], list):
       for item in message["content"]:
@@ -104,29 +130,26 @@ for message in st.session_state.messages:
     else:
       st.markdown(message["content"])
 
-# קלט מהמשתמש באמצעות st.chat_input (הדרך הטבעית והיציבה ביותר בשטרימלייט לשמירת שיחות)
+# אזור הקלט והעלאת קבצים באמצעות +
+with st.expander("➕ הוסף תמונה לשיחה", expanded=False):
+  uploaded_file = st.file_uploader(
+      "בחר תמונה:", type=["png", "jpg", "jpeg"], key="img_upload"
+  )
+
 prompt = st.chat_input("שאל משהו את AI VINO...")
-uploaded_file = st.file_uploader(
-    "העלה תמונה (אופציונלי):", type=["png", "jpg", "jpeg"]
-)
 
 if prompt or uploaded_file:
-  user_content = []
-  if prompt:
-    user_content.append(prompt)
-
   pil_img = None
   if uploaded_file:
     pil_img = Image.open(uploaded_file)
-    user_content.append(pil_img)
 
-  # שמירת הודעת המשתמש בסשן
-  st.session_state.messages.append(
-      {
-          "role": "user",
-          "content": prompt if not uploaded_file else user_content,
-      }
-  )
+  # עדכון כותרת השיחה לפי השאלה הראשונה
+  if not current_chat["messages"] and prompt:
+    current_chat["title"] = prompt[:18] + "..."
+
+  # שמירת הודעת המשתמש בשיחה הנוכחית
+  user_entry = prompt if not pil_img else [prompt, pil_img]
+  current_chat["messages"].append({"role": "user", "content": user_entry})
 
   with st.chat_message("user"):
     if prompt:
@@ -144,12 +167,15 @@ if prompt or uploaded_file:
     else:
       try:
         client = genai.Client(api_key=api_key)
-        contents_payload = [prompt] if prompt else []
+        payload = []
+        if prompt:
+          payload.append(prompt)
         if pil_img:
-          contents_payload.append(pil_img)
+          payload.append(pil_img)
 
+        # שימוש במודל הנתמך
         response = client.models.generate_content(
-            model="gemini-2.0-flash", contents=contents_payload
+            model="gemini-2.5-flash", contents=payload
         )
         response_text = response.text
       except Exception as e:
@@ -157,8 +183,8 @@ if prompt or uploaded_file:
 
     placeholder.markdown(response_text)
 
-    # שמירת תשובת הבוט בסשן כדי שתופיע בהיסטוריה תמיד
-    st.session_state.messages.append(
+    # שמירת תשובת הבוט בשיחה הנוכחית
+    current_chat["messages"].append(
         {"role": "assistant", "content": response_text}
     )
     st.rerun()
