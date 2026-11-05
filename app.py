@@ -36,155 +36,190 @@ if not api_key:
 
 ADMIN_EMAIL = "daniel@gmail.com"
 
-# ניהול סשנים של שיחות
-if "chats" not in st.session_state:
-  st.session_state.chats = {}
+# ניהול מסד נתונים פנימי בזיכרון למשתמשים וסיסמאות
+if "users_db" not in st.session_state:
+  st.session_state.users_db = {
+      ADMIN_EMAIL: "123456"
+  }  # מנהל ברירת מחדל
+if "logged_in_user" not in st.session_state:
+  st.session_state.logged_in_user = None
+
+# ניהול שיחות לכל משתמש בנפרד
+if "user_chats" not in st.session_state:
+  st.session_state.user_chats = {}  # {email: {chat_id: {title, messages}}}
 if "current_chat_id" not in st.session_state:
   st.session_state.current_chat_id = None
-if "user_email" not in st.session_state:
-  st.session_state.user_email = ""
-if "user_name" not in st.session_state:
-  st.session_state.user_name = "אורח"
 
+st.markdown("<h1>AI VINO</h1>", unsafe_allow_html+True)
 
-def create_new_chat():
-  chat_id = datetime.now().strftime("%Y%m%d_%H%M%S")
-  st.session_state.chats[chat_id] = {
-      "title": f"שיחה {len(st.session_state.chats) + 1}",
-      "messages": [],
-  }
-  st.session_state.current_chat_id = chat_id
-
-
-if (
-    not st.session_state.chats
-    or st.session_state.current_chat_id not in st.session_state.chats
-):
-  create_new_chat()
-
-st.markdown("<h1>AI VINO</h1>", unsafe_allow_html=True)
-
-# סרגל צד
+# סרגל צד - אזור התחברות והרשמה אמיתי
 with st.sidebar:
-  st.title("⚙️ תפריט")
+  st.title("⚙️ תפריט משתמש")
 
-  if not st.session_state.user_email:
-    st.info("התחבר באמצעות Google:")
-    login_email = st.text_input("הכנס כתובת מייל:", key="login_email_input")
-    if st.button("התחבר 🔵", use_container_width=True):
-      if login_email.strip():
-        st.session_state.user_email = login_email.strip()
-        st.session_state.user_name = login_email.split("@")[0]
-        st.rerun()
-  else:
-    st.success(f"מחובר: **{st.session_state.user_name}**")
-    if st.button("התנתק", use_container_width=True):
-      st.session_state.user_email = ""
-      st.session_state.user_name = "אורח"
-      st.rerun()
+  if not st.session_state.logged_in_user:
+    auth_mode = st.radio(
+        "בחר פעולה:", ["התחברות", "הרשמה למערכת"], label_visibility="collapsed"
+    )
 
-  st.markdown("---")
+    email_input = st.text_input("כתובת מייל:")
+    pass_input = st.text_input("סיסמה:", type="password")
 
-  if st.button("➕ שיחה חדשה", use_container_width=True):
-    create_new_chat()
-    st.rerun()
-
-  st.markdown("### 📜 השיחות שלי")
-  for cid, cdata in list(st.session_state.chats.items()):
-    label = f"💬 {cdata['title']}"
-    if cid == st.session_state.current_chat_id:
-      label = f"👉 {cdata['title']}"
-    if st.button(label, key=f"chat_btn_{cid}", use_container_width=True):
-      st.session_state.current_chat_id = cid
-      st.rerun()
-
-  if (
-      st.session_state.user_email == ADMIN_EMAIL
-      or "admin" in st.session_state.user_email
-  ):
-    st.markdown("---")
-    st.subheader("🛡️ פאנל מנהל")
-    st.write("מצב מנהל פעיל.")
-
-# טעינת השיחה הנוכחית
-current_chat = st.session_state.chats[st.session_state.current_chat_id]
-
-# הצגת היסטוריית ההודעות בשיחה
-for message in current_chat["messages"]:
-  with st.chat_message(message["role"]):
-    if isinstance(message["content"], list):
-      for item in message["content"]:
-        if isinstance(item, str):
-          st.markdown(item)
+    if auth_mode == "התחברות":
+      if st.button("התחבר 🔵", use_container_width=True):
+        if (
+            email_input in st.session_state.users_db
+            and st.session_state.users_db[email_input] == pass_input
+        ):
+          st.session_state.logged_in_user = email_input
+          if email_input not in st.session_state.user_chats:
+            st.session_state.user_chats[email_input] = {}
+          st.rerun()
         else:
-          st.image(item, width=300)
+          st.error("שגיאה במייל או בסיסמה.")
     else:
-      st.markdown(message["content"])
+      if st.button("הירשם 🟢", use_container_width=True):
+        if email_input.strip() and pass_input.strip():
+          if email_input in st.session_state.users_db:
+            st.warning("המשתמש כבר קיים במערכת.")
+          else:
+            st.session_state.users_db[email_input] = pass_input
+            st.session_state.user_chats[email_input] = {}
+            st.session_state.logged_in_user = email_input
+            st.success("נרשמת בהצלחה!")
+            st.rerun()
+        else:
+          st.warning("נא למלא מייל וסיסמה.")
+  else:
+    current_user = st.session_state.logged_in_user
+    st.success(f"مחובר: **{current_user}**")
+    if st.button("התנתק", use_container_width=True):
+      st.session_state.logged_in_user = None
+      st.session_state.current_chat_id = None
+      st.rerun()
 
-# שורת הקלט של הצ'אט
-prompt = st.chat_input("שאל משהו את AI VINO...")
+    st.markdown("---")
 
-# כפתור העלאת קבצים/תמונות ממוקם מיד מתחת לשורת השליחה
-uploaded_file = st.file_uploader(
-    "➕ הוסף תמונה להודעה הבאה", type=["png", "jpg", "jpeg"]
-)
+    # פונקציות ניהול שיחות למשתמש המחובר
+    user_chats = st.session_state.user_chats[current_user]
 
-if prompt or uploaded_file:
-  pil_img = None
-  if uploaded_file:
-    pil_img = Image.open(uploaded_file)
 
-  if not current_chat["messages"] and prompt:
-    current_chat["title"] = prompt[:18] + "..."
+    def create_user_chat():
+      cid = datetime.now().strftime("%Y%m%d_%H%M%S")
+      user_chats[cid] = {
+          "title": f"שיחה {len(user_chats) + 1}",
+          "messages": [],
+      }
+      st.session_state.current_chat_id = cid
 
-  user_entry = []
-  if prompt:
-    user_entry.append(prompt)
-  if pil_img:
-    user_entry.append(pil_img)
 
-  current_chat["messages"].append(
-      {"role": "user", "content": user_entry if len(user_entry) > 1 else prompt}
+    if not user_chats or st.session_state.current_chat_id not in user_chats:
+      create_user_chat()
+
+    if st.button("➕ שיחה חדשה", use_container_width=True):
+      create_user_chat()
+      st.rerun()
+
+    st.markdown("### 📜 השיחות שלי")
+    for cid, cdata in list(user_chats.items()):
+      label = f"💬 {cdata['title']}"
+      if cid == st.session_state.current_chat_id:
+        label = f"👉 {cdata['title']}"
+      if st.button(label, key=f"chat_btn_{cid}", use_container_width=True):
+        st.session_state.current_chat_id = cid
+        st.rerun()
+
+    if current_user == ADMIN_EMAIL:
+      st.markdown("---")
+      st.subheader("🛡️ פאנל מנהל")
+      st.write(f"משתמשים רשומים: {len(st.session_state.users_db)}")
+
+# תוכן ראשי - מוצג רק אם המשתמש מחובר
+if not st.session_state.logged_in_user:
+  st.info("👈 נא להתחבר או להירשם דרך תפריט צד ימין כדי להתחיל להשתמש ב-AI VINO.")
+else:
+  current_user = st.session_state.logged_in_user
+  user_chats = st.session_state.user_chats[current_user]
+  current_chat = user_chats[st.session_state.current_chat_id]
+
+  # הצגת היסטוריית השיחה
+  for message in current_chat["messages"]:
+    with st.chat_message(message["role"]):
+      if isinstance(message["content"], list):
+        for item in message["content"]:
+          if isinstance(item, str):
+            st.markdown(item)
+          else:
+            st.image(item, width=300)
+      else:
+        st.markdown(message["content"])
+
+  # שורת הקלט של הצ'אט
+  prompt = st.chat_input("שאל משהו את AI VINO...")
+
+  # העלאת תמונה
+  uploaded_file = st.file_uploader(
+      "➕ הוסף תמונה להודעה", type=["png", "jpg", "jpeg"]
   )
 
-  with st.chat_message("user"):
+  if prompt or uploaded_file:
+    pil_img = None
+    if uploaded_file:
+      pil_img = Image.open(uploaded_file)
+
+    if not current_chat["messages"] and prompt:
+      current_chat["title"] = prompt[:18] + "..."
+
+    user_entry = []
     if prompt:
-      st.markdown(prompt)
+      user_entry.append(prompt)
     if pil_img:
-      st.image(pil_img, width=300)
+      user_entry.append(pil_img)
 
-  with st.chat_message("assistant"):
-    placeholder = st.empty()
-    placeholder.markdown("חושב...")
+    current_chat["messages"].append(
+        {
+            "role": "user",
+            "content": user_entry if len(user_entry) > 1 else prompt,
+        }
+    )
 
-    response_text = ""
-    if not api_key:
-      response_text = "⚠️ לא הוגדר מפתח API ב-Secrets."
-    else:
-      try:
-        client = genai.Client(api_key=api_key)
-        payload = []
-        if prompt:
-          payload.append(prompt)
-        if pil_img:
-          payload.append(pil_img)
+    with st.chat_message("user"):
+      if prompt:
+        st.markdown(prompt)
+      if pil_img:
+        st.image(pil_img, width=300)
 
-        response = client.models.generate_content(
-            model="gemini-2.5-flash", contents=payload
-        )
-        response_text = response.text
-      except Exception as e:
+    with st.chat_message("assistant"):
+      placeholder = st.empty()
+      placeholder.markdown("חושב...")
+
+      response_text = ""
+      if not api_key:
+        response_text = "⚠️ לא הוגדר מפתח API ב-Secrets."
+      else:
         try:
           client = genai.Client(api_key=api_key)
+          payload = []
+          if prompt:
+            payload.append(prompt)
+          if pil_img:
+            payload.append(pil_img)
+
           response = client.models.generate_content(
-              model="gemini-1.5-flash", contents=payload
+              model="gemini-2.5-flash", contents=payload
           )
           response_text = response.text
-        except Exception as e2:
-          response_text = f"⚠️ שגיאה: {e2}"
+        except Exception as e:
+          try:
+            client = genai.Client(api_key=api_key)
+            response = client.models.generate_content(
+                model="gemini-1.5-flash", contents=payload
+            )
+            response_text = response.text
+          except Exception as e2:
+            response_text = f"⚠️ שגיאה: {e2}"
 
-    placeholder.markdown(response_text)
-    current_chat["messages"].append(
-        {"role": "assistant", "content": response_text}
-    )
-    st.rerun()
+      placeholder.markdown(response_text)
+      current_chat["messages"].append(
+          {"role": "assistant", "content": response_text}
+      )
+      st.rerun()
