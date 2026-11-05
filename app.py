@@ -94,9 +94,9 @@ if submit_button and prompt.strip():
         try:
           client = genai.Client(api_key=current_key)
 
-          # שימוש במודל העדכני שהמערכת דורשת
+          # שימוש במודל היציב והמוכח gemini-1.5-flash
           response = client.models.generate_content(
-              model="gemini-3.8-flash", contents=prompt
+              model="gemini-1.5-flash", contents=prompt
           )
 
           response_text = response.text
@@ -118,8 +118,10 @@ if submit_button and prompt.strip():
             time.sleep(1)
             tried_keys += 1
           else:
-            response_text = f"⚠️ שגיאה: {err_str}"
-            break
+            tried_keys += 1
+            st.session_state.key_index = (
+                st.session_state.key_index + 1
+            ) % total_keys
 
       if not success and not response_text:
         response_text = "⚠️ כל המפתחות הגיעו למגבלה או שאינם תקינים."
