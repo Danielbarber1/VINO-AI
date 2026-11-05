@@ -195,8 +195,9 @@ else:
           if pil_img:
             payload.append(pil_img)
 
+          # שימוש במודל היציב והנתמך ב-SDK החדש
           response = client.models.generate_content(
-              model="gemini-2.5-flash", contents=payload
+              model="gemini-2.0-flash", contents=payload
           )
           response_text = response.text
         except Exception as e:
