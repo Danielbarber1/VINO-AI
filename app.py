@@ -1,8 +1,6 @@
 import os
-import time
 import streamlit as st
 from google import genai
-from google.genai import types
 
 st.set_page_config(
     page_title="AI VINO",
@@ -20,17 +18,15 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-keys_raw = os.getenv("GEMINI_KEYS")
-if not keys_raw:
+# טעינת המפתח היחיד (תומך גם ב-GEMINI_API_KEY וגם ב-GEMINI_KEYS)
+api_key = os.getenv("GEMINI_API_KEY")
+if not api_key:
   try:
-    keys_raw = st.secrets["GEMINI_KEYS"]
+    api_key = st.secrets.get("GEMINI_API_KEY", "")
+    if not api_key:
+      api_key = st.secrets.get("GEMINI_KEYS", "")
   except Exception:
-    keys_raw = ""
-
-api_keys = [k.strip() for k in keys_raw.split(",") if k.strip()]
-
-if "key_index" not in st.session_state:
-  st.session_state.key_index = 0
+    api_key = ""
 
 st.markdown(
     "<h1 style='text-align: center; color: #f0f2f6;'>AI VINO</h1>",
@@ -79,55 +75,21 @@ if submit_button and prompt.strip():
     placeholder.markdown("חושב...")
 
     response_text = ""
-    success = False
 
-    if not api_keys:
-      response_text = "⚠️ לא הוגדרו מפתחות ב-GEMINI_KEYS."
-      placeholder.markdown(response_text)
+    if not api_key:
+      response_text = "⚠️ לא הוגדר מפתח API ב-Secrets."
     else:
-      tried_keys = 0
-      total_keys = len(api_keys)
-
-      while tried_keys < total_keys and not success:
-        current_key = api_keys[st.session_state.key_index]
-
-        try:
-          client = genai.Client(api_key=current_key)
-
-          # שימוש במודל היציב והמוכח gemini-1.5-flash
-          response = client.models.generate_content(
-              model="gemini-1.5-flash", contents=prompt
-          )
-
-          response_text = response.text
-          success = True
-
-        except Exception as e:
-          err_str = str(e)
-          if (
-              "429" in err_str
-              or "RESOURCE_EXHAUSTED" in err_str
-              or "401" in err_str
-              or "UNAUTHENTICATED" in err_str
-          ):
-            tried_keys += 1
-            st.session_state.key_index = (
-                st.session_state.key_index + 1
-            ) % total_keys
-          elif "503" in err_str or "UNAVAILABLE" in err_str:
-            time.sleep(1)
-            tried_keys += 1
-          else:
-            tried_keys += 1
-            st.session_state.key_index = (
-                st.session_state.key_index + 1
-            ) % total_keys
-
-      if not success and not response_text:
-        response_text = "⚠️ כל המפתחות הגיעו למגבלה או שאינם תקינים."
+      try:
+        client = genai.Client(api_key=api_key)
+        response = client.models.generate_content(
+            model="gemini-1.5-flash", contents=prompt
+        )
+        response_text = response.text
+      except Exception as e:
+        response_text = f"⚠️ שגיאה: {e}"
 
     placeholder.markdown(response_text)
-    if success:
+    if not response_text.startswith("⚠️"):
       st.session_state.messages.append(
           {"role": "assistant", "content": response_text}
       )
