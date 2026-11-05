@@ -109,7 +109,7 @@ with st.sidebar:
 # טעינת השיחה הנוכחית
 current_chat = st.session_state.chats[st.session_state.current_chat_id]
 
-# הצגת היסטוריית ההודעות
+# הצגת היסטוריית ההודעות בשיחה
 for message in current_chat["messages"]:
   with st.chat_message(message["role"]):
     if isinstance(message["content"], list):
@@ -121,14 +121,12 @@ for message in current_chat["messages"]:
     else:
       st.markdown(message["content"])
 
-# שורת קלט מרכזית הכוללת אפשרות צמודה להעלאת קבצים/תמונות (+)
-col_input, col_file = st.columns([5, 1])
+# אזור הוספת תמונה בצמוד למטה ליד כפתור השליחה
+uploaded_file = st.file_uploader(
+    "➕ הוסף תמונה (אופציונלי)", type=["png", "jpg", "jpeg"]
+)
 
-with col_file:
-  uploaded_file = st.file_uploader(
-      "➕ תמונה", type=["png", "jpg", "jpeg"], label_visibility="collapsed"
-  )
-
+# שורת הקלט של הצ'אט
 prompt = st.chat_input("שאל משהו את AI VINO...")
 
 if prompt or uploaded_file:
@@ -139,14 +137,15 @@ if prompt or uploaded_file:
   if not current_chat["messages"] and prompt:
     current_chat["title"] = prompt[:18] + "..."
 
-  user_entry = prompt if not pil_img else ([prompt] if prompt else [])
+  user_entry = []
+  if prompt:
+    user_entry.append(prompt)
   if pil_img:
-    if isinstance(user_entry, list):
-      user_entry.append(pil_img)
-    else:
-      user_entry = [user_entry, pil_img]
+    user_entry.append(pil_img)
 
-  current_chat["messages"].append({"role": "user", "content": user_entry})
+  current_chat["messages"].append(
+      {"role": "user", "content": user_entry if len(user_entry) > 1 else prompt}
+  )
 
   with st.chat_message("user"):
     if prompt:
@@ -170,13 +169,21 @@ if prompt or uploaded_file:
         if pil_img:
           payload.append(pil_img)
 
-        # שימוש במודל העדכני שהמערכת דורשת
+        # שימוש במודל יציב ומהיר
         response = client.models.generate_content(
-            model="gemini-3.8-flash", contents=payload
+            model="gemini-2.5-flash", contents=payload
         )
         response_text = response.text
       except Exception as e:
-        response_text = f"⚠️ שגיאה: {e}"
+        # גיבוי למקרה שהמודל הקודם לא זמין
+        try:
+          client = genai.Client(api_key=api_key)
+          response = client.models.generate_content(
+              model="gemini-1.5-flash", contents=payload
+          )
+          response_text = response.text
+        except Exception as e2:
+          response_text = f"⚠️ שגיאה: {e2}"
 
     placeholder.markdown(response_text)
     current_chat["messages"].append(
