@@ -36,23 +36,21 @@ if not api_key:
 
 ADMIN_EMAIL = "daniel@gmail.com"
 
-# ניהול מסד נתונים פנימי בזיכרון למשתמשים וסיסמאות
+# ניהול משתמשים וסיסמאות
 if "users_db" not in st.session_state:
-  st.session_state.users_db = {
-      ADMIN_EMAIL: "123456"
-  }  # מנהל ברירת מחדל
+  st.session_state.users_db = {ADMIN_EMAIL: "123456"}
 if "logged_in_user" not in st.session_state:
   st.session_state.logged_in_user = None
 
-# ניהול שיחות לכל משתמש בנפרד
+# ניהול שיחות
 if "user_chats" not in st.session_state:
-  st.session_state.user_chats = {}  # {email: {chat_id: {title, messages}}}
+  st.session_state.user_chats = {}
 if "current_chat_id" not in st.session_state:
   st.session_state.current_chat_id = None
 
-st.markdown("<h1>AI VINO</h1>", unsafe_allow_html+True)
+# תוקן: פסיק נכון במקום פלוס
+st.markdown("<h1>AI VINO</h1>", unsafe_allow_html=True)
 
-# סרגל צד - אזור התחברות והרשמה אמיתי
 with st.sidebar:
   st.title("⚙️ תפריט משתמש")
 
@@ -91,7 +89,7 @@ with st.sidebar:
           st.warning("נא למלא מייל וסיסמה.")
   else:
     current_user = st.session_state.logged_in_user
-    st.success(f"مחובר: **{current_user}**")
+    st.success(f"מחובר: **{current_user}**")
     if st.button("התנתק", use_container_width=True):
       st.session_state.logged_in_user = None
       st.session_state.current_chat_id = None
@@ -99,7 +97,6 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # פונקציות ניהול שיחות למשתמש המחובר
     user_chats = st.session_state.user_chats[current_user]
 
 
@@ -133,15 +130,13 @@ with st.sidebar:
       st.subheader("🛡️ פאנל מנהל")
       st.write(f"משתמשים רשומים: {len(st.session_state.users_db)}")
 
-# תוכן ראשי - מוצג רק אם המשתמש מחובר
 if not st.session_state.logged_in_user:
-  st.info("👈 נא להתחבר או להירשם דרך תפריט צד ימין כדי להתחיל להשתמש ב-AI VINO.")
+  st.info("👈 נא להתחבר או להירשם דרך תפריט צד שמאל/ימין כדי להתחיל.")
 else:
   current_user = st.session_state.logged_in_user
   user_chats = st.session_state.user_chats[current_user]
   current_chat = user_chats[st.session_state.current_chat_id]
 
-  # הצגת היסטוריית השיחה
   for message in current_chat["messages"]:
     with st.chat_message(message["role"]):
       if isinstance(message["content"], list):
@@ -153,10 +148,7 @@ else:
       else:
         st.markdown(message["content"])
 
-  # שורת הקלט של הצ'אט
   prompt = st.chat_input("שאל משהו את AI VINO...")
-
-  # העלאת תמונה
   uploaded_file = st.file_uploader(
       "➕ הוסף תמונה להודעה", type=["png", "jpg", "jpeg"]
   )
@@ -215,11 +207,4 @@ else:
                 model="gemini-1.5-flash", contents=payload
             )
             response_text = response.text
-          except Exception as e2:
-            response_text = f"⚠️ שגיאה: {e2}"
-
-      placeholder.markdown(response_text)
-      current_chat["messages"].append(
-          {"role": "assistant", "content": response_text}
-      )
-      st.rerun()
+          except Exception as
