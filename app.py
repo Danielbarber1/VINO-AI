@@ -10,14 +10,12 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# עיצוב מותאם: כחול-לבן עם כותרת סגולה וממשק נקי
 st.markdown(
     """
     <style>
     .main { background-color: #0b1329; color: #ffffff; }
     .stTextInput textarea, .stChatInput input { background-color: #1e293b !important; color: #ffffff !important; }
     h1 { color: #a855f7 !important; text-align: center; font-weight: 800; }
-    .sidebar .sidebar-content { background-color: #0f172a; }
     </style>
 """,
     unsafe_allow_html=True,
@@ -35,10 +33,9 @@ if not api_key:
   except Exception:
     api_key = ""
 
-# הגדרת מנהל המערכת (הכנס כאן את המייל שלך או השאר ברירת מחדל)
 ADMIN_EMAIL = "daniel@gmail.com"
 
-# ניהול מצב משתמש והיסטוריה בסשן
+# אתחול היסטוריה ומשתמש
 if "messages" not in st.session_state:
   st.session_state.messages = []
 if "user_email" not in st.session_state:
@@ -48,21 +45,20 @@ if "user_name" not in st.session_state:
 
 st.markdown("<h1>AI VINO</h1>", unsafe_allow_html=True)
 
-# סרגל צד מתקדם
+# סרגל צד
 with st.sidebar:
   st.title("⚙️ תפריט מערכת")
 
-  # אזור התחברות מדמה למשתמשי גוגל
   if not st.session_state.user_email:
-    st.info("התחבר באמצעות חשבון Google שלך:")
-    login_email_input = st.text_input("הכנס כתובת מייל:")
+    st.info("התחבר באמצעות חשבון Google:")
+    login_email = st.text_input("הכנס כתובת מייל:", key="login_email_input")
     if st.button("התחבר 🔵", use_container_width=True):
-      if login_email_input.strip():
-        st.session_state.user_email = login_email_input.strip()
-        st.session_state.user_name = login_email_input.split("@")[0]
+      if login_email.strip():
+        st.session_state.user_email = login_email.strip()
+        st.session_state.user_name = login_email.split("@")[0]
         st.rerun()
   else:
-    st.success(f"מחובר בשם: **{st.session_state.user_name}**")
+    st.success(f"מחובר: **{st.session_state.user_name}**")
     if st.button("התנתק", use_container_width=True):
       st.session_state.user_email = ""
       st.session_state.user_name = "אורח"
@@ -76,34 +72,27 @@ with st.sidebar:
 
   st.markdown("### 📜 היסטוריית שיחות")
   if not st.session_state.messages:
-    st.write("אין היסטוריה פעילה בשיחה זו.")
+    st.write("אין הודעות בהיסטוריה.")
   else:
-    for idx, msg in enumerate(st.session_state.messages):
-      prefix = "👤" if msg["role"] == "user" else "🤖"
-      # הצגת תקציר ההודעה בהיסטוריה
-      content_preview = (
+    for msg in st.session_state.messages:
+      icon = "👤" if msg["role"] == "user" else "🤖"
+      txt = (
           msg["content"]
           if isinstance(msg["content"], str)
           else "[הודעת תמונה]"
       )
-      st.text(f"{prefix} {content_preview[:20]}...")
+      st.text(f"{icon} {txt[:22]}...")
 
-  # פאנל ניהול מיוחד למנהל בלבד
+  # פאנל מנהל
   if (
       st.session_state.user_email == ADMIN_EMAIL
       or "admin" in st.session_state.user_email
   ):
     st.markdown("---")
-    st.subheader("🛡️ פאנל מנהל (Admin)")
-    st.markdown("ברוך הבא, מנהל המערכת!")
-    admin_action = st.selectbox(
-        "בחר פעולת ניהול:",
-        ["צפה בסטטיסטיקות", "נקה מטמון מערכת", "הגדרות סקילים מתקדמות"],
-    )
-    if st.button("בצע פעולת מנהל", use_container_width=True):
-      st.success(f"הפעולה '{admin_action}' בוצעה בהצלחה!")
+    st.subheader("🛡️ פאנל מנהל")
+    st.write("מצב מנהל פעיל בהצלחה.")
 
-# הצגת היסטוריית הצ'אט במסך הראשי
+# הצגת כל ההיסטוריה מתוך st.session_state בכל טעינה מחדש
 for message in st.session_state.messages:
   with st.chat_message(message["role"]):
     if isinstance(message["content"], list):
@@ -115,22 +104,15 @@ for message in st.session_state.messages:
     else:
       st.markdown(message["content"])
 
-# אזור קלט הכולל טקסט ואפשרות הוספת תמונה
-st.markdown("---")
+# קלט מהמשתמש באמצעות st.chat_input (הדרך הטבעית והיציבה ביותר בשטרימלייט לשמירת שיחות)
+prompt = st.chat_input("שאל משהו את AI VINO...")
 uploaded_file = st.file_uploader(
     "העלה תמונה (אופציונלי):", type=["png", "jpg", "jpeg"]
 )
-prompt = st.text_area(
-    "כתוב את ההודעה שלך כאן:", placeholder="שאל משהו את AI VINO..."
-)
 
-col1, col2 = st.columns([6, 1])
-with col2:
-  send_btn = st.button("שלח 🚀", use_container_width=True)
-
-if send_btn and (prompt.strip() or uploaded_file):
+if prompt or uploaded_file:
   user_content = []
-  if prompt.strip():
+  if prompt:
     user_content.append(prompt)
 
   pil_img = None
@@ -138,11 +120,16 @@ if send_btn and (prompt.strip() or uploaded_file):
     pil_img = Image.open(uploaded_file)
     user_content.append(pil_img)
 
-  # הוספה להיסטוריה
-  st.session_state.messages.append({"role": "user", "content": user_content})
+  # שמירת הודעת המשתמש בסשן
+  st.session_state.messages.append(
+      {
+          "role": "user",
+          "content": prompt if not uploaded_file else user_content,
+      }
+  )
 
   with st.chat_message("user"):
-    if prompt.strip():
+    if prompt:
       st.markdown(prompt)
     if pil_img:
       st.image(pil_img, width=300)
@@ -157,11 +144,7 @@ if send_btn and (prompt.strip() or uploaded_file):
     else:
       try:
         client = genai.Client(api_key=api_key)
-
-        # בניית מבנה התוכן לשליחה למודל (תמיכה בתמונה + טקסט)
-        contents_payload = []
-        if prompt.strip():
-          contents_payload.append(prompt)
+        contents_payload = [prompt] if prompt else []
         if pil_img:
           contents_payload.append(pil_img)
 
@@ -170,9 +153,11 @@ if send_btn and (prompt.strip() or uploaded_file):
         )
         response_text = response.text
       except Exception as e:
-        response_text = f"⚠️ שגיאה בתקשורת מול ה-AI: {e}"
+        response_text = f"⚠️ שגיאה: {e}"
 
     placeholder.markdown(response_text)
+
+    # שמירת תשובת הבוט בסשן כדי שתופיע בהיסטוריה תמיד
     st.session_state.messages.append(
         {"role": "assistant", "content": response_text}
     )
