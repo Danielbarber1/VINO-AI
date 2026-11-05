@@ -11,18 +11,20 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# עיצוב מותאם: כחול-לבן עם כותרת סגולה מודרנית
 st.markdown(
     """
     <style>
     .main { background-color: #0b1329; color: #ffffff; }
     .stTextInput textarea, .stChatInput input { background-color: #1e293b !important; color: #ffffff !important; }
-    h1 { color: #a855f7 !important; text-align: center; font-weight: 800; }
+    h1 { color: #a855f7 !important; text-align: center; font-weight: 800; font-size: 2.8rem; }
+    .stButton button { border-radius: 8px; font-weight: bold; }
     </style>
 """,
     unsafe_allow_html=True,
 )
 
-# טעינת מפתח API
+# טעינת מפתח API מכל המקורות האפשריים
 api_key = os.getenv("GEMINI_API_KEY")
 if not api_key:
   try:
@@ -36,13 +38,13 @@ if not api_key:
 
 ADMIN_EMAIL = "daniel@gmail.com"
 
-# ניהול משתמשים וסיסמאות
+# 1. מנגנון משתמשים בזיכרון המערכת
 if "users_db" not in st.session_state:
   st.session_state.users_db = {ADMIN_EMAIL: "123456"}
 if "logged_in_user" not in st.session_state:
   st.session_state.logged_in_user = None
 
-# ניהול שיחות
+# 2. מנגנון שיחות נפרדות לפי משתמש
 if "user_chats" not in st.session_state:
   st.session_state.user_chats = {}
 if "current_chat_id" not in st.session_state:
@@ -50,14 +52,14 @@ if "current_chat_id" not in st.session_state:
 
 st.markdown("<h1>AI VINO</h1>", unsafe_allow_html=True)
 
+# --- סרגל צד: ניהול משתמש ושיחות ---
 with st.sidebar:
-  st.title("⚙️ תפריט משתמש")
+  st.title("⚙️ תפריט מערכת")
 
   if not st.session_state.logged_in_user:
     auth_mode = st.radio(
         "בחר פעולה:", ["התחברות", "הרשמה למערכת"], label_visibility="collapsed"
     )
-
     email_input = st.text_input("כתובת מייל:")
     pass_input = st.text_input("סיסמה:", type="password")
 
@@ -88,7 +90,7 @@ with st.sidebar:
           st.warning("נא למלא מייל וסיסמה.")
   else:
     current_user = st.session_state.logged_in_user
-    st.success(f"מחובר: **{current_user}**")
+    st.success(f"מחובר כ: **{current_user}**")
     if st.button("התנתק", use_container_width=True):
       st.session_state.logged_in_user = None
       st.session_state.current_chat_id = None
@@ -126,85 +128,8 @@ with st.sidebar:
 
     if current_user == ADMIN_EMAIL:
       st.markdown("---")
-      st.subheader("🛡️ פאנל מנהל")
-      st.write(f"משתמשים רשומים: {len(st.session_state.users_db)}")
+      st.subheader("🛡️ פאנל מנהל (Admin)")
+      st.write(f"👥 משתמשים רשומים: {len(st.session_state.users_db)}")
+      st.write(f"💬 סך כל השיחות: {len(user_chats)}")
 
-if not st.session_state.logged_in_user:
-  st.info("👈 נא להתחבר או להירשם דרך תפריט צד ימין כדי להתחיל.")
-else:
-  current_user = st.session_state.logged_in_user
-  user_chats = st.session_state.user_chats[current_user]
-  current_chat = user_chats[st.session_state.current_chat_id]
-
-  for message in current_chat["messages"]:
-    with st.chat_message(message["role"]):
-      if isinstance(message["content"], list):
-        for item in message["content"]:
-          if isinstance(item, str):
-            st.markdown(item)
-          else:
-            st.image(item, width=300)
-      else:
-        st.markdown(message["content"])
-
-  prompt = st.chat_input("שאל משהו את AI VINO...")
-  uploaded_file = st.file_uploader(
-      "➕ הוסף תמונה להודעה", type=["png", "jpg", "jpeg"]
-  )
-
-  if prompt or uploaded_file:
-    pil_img = None
-    if uploaded_file:
-      pil_img = Image.open(uploaded_file)
-
-    if not current_chat["messages"] and prompt:
-      current_chat["title"] = prompt[:18] + "..."
-
-    user_entry = []
-    if prompt:
-      user_entry.append(prompt)
-    if pil_img:
-      user_entry.append(pil_img)
-
-    current_chat["messages"].append(
-        {
-            "role": "user",
-            "content": user_entry if len(user_entry) > 1 else prompt,
-        }
-    )
-
-    with st.chat_message("user"):
-      if prompt:
-        st.markdown(prompt)
-      if pil_img:
-        st.image(pil_img, width=300)
-
-    with st.chat_message("assistant"):
-      placeholder = st.empty()
-      placeholder.markdown("חושב...")
-
-      response_text = ""
-      if not api_key:
-        response_text = "⚠️ לא הוגדר מפתח API ב-Secrets."
-      else:
-        try:
-          client = genai.Client(api_key=api_key)
-          payload = []
-          if prompt:
-            payload.append(prompt)
-          if pil_img:
-            payload.append(pil_img)
-
-          # שימוש במודל המעודכן התואם לגרסה הנוכחית של הספריות
-          response = client.models.generate_content(
-              model="gemini-2.5-flash", contents=payload
-          )
-          response_text = response.text
-        except Exception as e:
-          response_text = f"⚠️ שגיאה: {e}"
-
-      placeholder.markdown(response_text)
-      current_chat["messages"].append(
-          {"role": "assistant", "content": response_text}
-      )
-      st.rerun()
+# --- אזור ת
