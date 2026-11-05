@@ -11,6 +11,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# עיצוב UI פרימיום נקי ומודרני
 st.markdown(
     """
     <style>
@@ -23,7 +24,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# טעינת מפתח API
+# טעינת מפתח API בצורה מאובטחת
 api_key = os.getenv("GEMINI_API_KEY")
 if not api_key:
   try:
@@ -37,13 +38,13 @@ if not api_key:
 
 ADMIN_EMAIL = "daniel@gmail.com"
 
-# ניהול משתמשים וסיסמאות
+# ניהול בסיס נתונים בזיכרון למשתמשים
 if "users_db" not in st.session_state:
   st.session_state.users_db = {ADMIN_EMAIL: "123456"}
 if "logged_in_user" not in st.session_state:
   st.session_state.logged_in_user = None
 
-# ניהול שיחות
+# ניהול היסטוריית שיחות מבודדת למשתמשים
 if "user_chats" not in st.session_state:
   st.session_state.user_chats = {}
 if "current_chat_id" not in st.session_state:
@@ -51,9 +52,9 @@ if "current_chat_id" not in st.session_state:
 
 st.markdown("<h1>AI VINO</h1>", unsafe_allow_html=True)
 
-# --- סרגל צד ---
+# --- סרגל צד מתקדם ---
 with st.sidebar:
-  st.title("⚙️ תפריט משתמש")
+  st.title("⚙️ ניהול מערכת")
 
   if not st.session_state.logged_in_user:
     auth_mode = st.radio(
@@ -126,18 +127,21 @@ with st.sidebar:
 
     if current_user == ADMIN_EMAIL:
       st.markdown("---")
-      st.subheader("🛡️ פאנל מנהל")
-      st.write(f"משתמשים רשומים: {len(st.session_state.users_db)}")
+      st.subheader("🛡️ פאנל מנהל מערכת")
+      st.write(f"👥 משתמשים רשומים: {len(st.session_state.users_db)}")
 
 # --- תוכן ראשי ---
 if not st.session_state.logged_in_user:
-  st.info("👈 נא להתחבר או להירשם דרך תפריט צד ימין כדי להתחיל.")
+  st.info(
+      "👈 נא להתחבר או להירשם דרך תפריט צד ימין כדי לטעון את סביבת העבודה של"
+      " AI VINO."
+  )
 else:
   current_user = st.session_state.logged_in_user
   user_chats = st.session_state.user_chats[current_user]
   current_chat = user_chats[st.session_state.current_chat_id]
 
-  # הצגת היסטוריית השיחה
+  # הצגת היסטוריית הודעות
   for message in current_chat["messages"]:
     with st.chat_message(message["role"]):
       if isinstance(message["content"], list):
@@ -149,7 +153,7 @@ else:
       else:
         st.markdown(message["content"])
 
-  # שורת הקלט והעלאת התמונה בצמוד אליה
+  # שורת קלט והעלאת קבצים בצמוד
   col_up, col_chat = st.columns([1, 4])
   with col_up:
     uploaded_file = st.file_uploader(
@@ -187,13 +191,16 @@ else:
 
     with st.chat_message("assistant"):
       placeholder = st.empty()
-      placeholder.markdown("חושב...")
+      placeholder.markdown("מעבד נתונים...")
 
       response_text = ""
       if not api_key:
-        response_text = "⚠️ לא הוגדר מפתח API ב-Secrets."
+        response_text = (
+            "⚠️ מפתח ה-API לא זוהה. וודא שהוא מוגדר תחת Streamlit Secrets."
+        )
       else:
         try:
+          # אתחול קליינט רשמי ועבודה ישירה מול ה-API המעודכן
           client = genai.Client(api_key=api_key)
           payload = []
           if prompt:
@@ -201,20 +208,16 @@ else:
           if pil_img:
             payload.append(pil_img)
 
-          # ניסיון שימוש במודל יציב דרך ה-SDK החדש עם מנגנון הגנה
+          # שימוש במודל היציב ביותר ללא שגיאות 404
           response = client.models.generate_content(
-              model="gemini-2.5-flash", contents=payload
+              model="gemini-1.5-flash", contents=payload
           )
           response_text = response.text
         except Exception as e:
-          try:
-            client = genai.Client(api_key=api_key)
-            response = client.models.generate_content(
-                model="gemini-1.5-flash", contents=payload
-            )
-            response_text = response.text
-          except Exception as e2:
-            response_text = f"⚠️ שגיאה: {e2}"
+          response_text = (
+              "⚠️ שגיאה במערכת ה-AI. אנא נסה שוב או בדוק את תקינות המפתח."
+              f" פרטים: {e}"
+          )
 
       placeholder.markdown(response_text)
       current_chat["messages"].append(
