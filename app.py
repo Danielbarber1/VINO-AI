@@ -200,5 +200,10 @@ else:
           )
           response_text = response.text
         except Exception as e:
-          try:
-            client = genai.Client(api_key=api_key)
+          response_text = f"⚠️ שגיאה: {e}"
+
+      placeholder.markdown(response_text)
+      current_chat["messages"].append(
+          {"role": "assistant", "content": response_text}
+      )
+      st.rerun()
