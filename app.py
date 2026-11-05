@@ -121,13 +121,13 @@ for message in current_chat["messages"]:
     else:
       st.markdown(message["content"])
 
-# אזור הוספת תמונה בצמוד למטה ליד כפתור השליחה
-uploaded_file = st.file_uploader(
-    "➕ הוסף תמונה (אופציונלי)", type=["png", "jpg", "jpeg"]
-)
-
 # שורת הקלט של הצ'אט
 prompt = st.chat_input("שאל משהו את AI VINO...")
+
+# כפתור העלאת קבצים/תמונות ממוקם מיד מתחת לשורת השליחה
+uploaded_file = st.file_uploader(
+    "➕ הוסף תמונה להודעה הבאה", type=["png", "jpg", "jpeg"]
+)
 
 if prompt or uploaded_file:
   pil_img = None
@@ -169,13 +169,11 @@ if prompt or uploaded_file:
         if pil_img:
           payload.append(pil_img)
 
-        # שימוש במודל יציב ומהיר
         response = client.models.generate_content(
             model="gemini-2.5-flash", contents=payload
         )
         response_text = response.text
       except Exception as e:
-        # גיבוי למקרה שהמודל הקודם לא זמין
         try:
           client = genai.Client(api_key=api_key)
           response = client.models.generate_content(
