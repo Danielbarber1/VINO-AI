@@ -18,7 +18,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# טעינת המפתח היחיד (תומך גם ב-GEMINI_API_KEY וגם ב-GEMINI_KEYS)
+# טעינת המפתח היחיד
 api_key = os.getenv("GEMINI_API_KEY")
 if not api_key:
   try:
@@ -81,8 +81,9 @@ if submit_button and prompt.strip():
     else:
       try:
         client = genai.Client(api_key=api_key)
+        # שימוש במודל העדכני והנתמך בספרייה החדשה
         response = client.models.generate_content(
-            model="gemini-1.5-flash", contents=prompt
+            model="gemini-2.0-flash", contents=prompt
         )
         response_text = response.text
       except Exception as e:
